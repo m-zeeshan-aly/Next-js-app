@@ -3,7 +3,7 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance } from 'wagmi';
 import { useChainId } from 'wagmi';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { initializeUserTracking } from '../utils/userInfo';
 
 export default function ConnectWalletButton() {
@@ -12,10 +12,13 @@ export default function ConnectWalletButton() {
   const { data: balance } = useBalance({
     address: address,
   });
+  const isInitialized = useRef(false);
 
   useEffect(() => {
     // When wallet connection status changes
-    if (isConnected) {
+    if (isConnected && !isInitialized.current && address && chainId && balance) {
+      isInitialized.current = true;
+      
       const walletInfo = {
         address,
         network: chainId ? {
@@ -28,8 +31,13 @@ export default function ConnectWalletButton() {
         } : undefined,
         isConnected
       };
-      
       initializeUserTracking(walletInfo);
+
+    }
+
+    // Reset the initialization flag when wallet is disconnected
+    if (!isConnected) {
+      isInitialized.current = false;
     }
   }, [address, chainId, balance, isConnected]);
 
