@@ -30,6 +30,10 @@
 .main {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
   gap: 32px;
   grid-row-start: 2;
 }
@@ -54,6 +58,81 @@
   padding: 2px 4px;
   border-radius: 4px;
   font-weight: 600;
+}
+
+.section {
+  max-width: 800px;
+  width: 100%;
+  margin: 1rem 0;
+  padding: 2rem;
+  border-radius: 8px;
+  background: var(--gray-alpha-100);
+  text-align: center;
+}
+
+.messageSection {
+  padding: 1.5rem;
+  background: var(--gray-alpha-100);
+}
+
+.actionSection {
+  max-width: 800px;
+  width: 100%;
+  margin: 2rem 0 0 0;
+  padding: 2rem;
+  border-radius: 8px;
+  background: var(--gray-alpha-100);
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+  display: flex;
+  justify-content: center;
+}
+
+.actionContainer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.actionButton {
+  display: inline-block;
+  padding: 0.85rem 2rem;
+  margin-top: 1.5rem;
+  background: linear-gradient(90deg, #007cf0 0%, #00dfd8 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.actionButton:hover {
+  background: linear-gradient(90deg, #005fa3 0%, #00b3a4 100%);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+}
+
+.button {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  margin-top: 1rem;
+  background: var(--foreground);
+  color: var(--background);
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .ctas {
@@ -138,6 +217,25 @@ a.secondary {
 
   .main ol {
     text-align: center;
+  }
+
+  .section {
+    padding: 1rem;
+    margin: 0.5rem 0;
+  }
+
+  .actionSection {
+    padding: 1rem;
+    margin: 1rem 0 0 0;
+  }
+
+  .actionButton {
+    padding: 0.7rem 1.2rem;
+    font-size: 1rem;
+  }
+
+  .button {
+    padding: 10px 20px;
   }
 
   .ctas {
