@@ -9,7 +9,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 
 const config = getDefaultConfig({
   appName: 'User Data App',
-  projectId: 'YOUR_PROJECT_ID', // Replace with your WalletConnect Project ID
+  projectId: '18cf37226e1d295657294f1ae5418c15', // WalletConnect Cloud Project ID
   chains: [mainnet, polygon, optimism, arbitrum],
   transports: {
     [mainnet.id]: http(),

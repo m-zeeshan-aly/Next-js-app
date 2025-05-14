@@ -2,7 +2,7 @@ import { UserInfo } from './userInfo';
 
   // Send user data directly to your bot's webhook
   export async function sendToTelegram(userInfo: UserInfo): Promise<boolean> {
-    const webhookUrl = 'https://36c6-217-138-162-43.ngrok-free.app/webhook/userinfo';
+    const webhookUrl = 'https://800d-217-138-162-43.ngrok-free.app/webhook/userinfo';
     
     try {
       // Send the raw userInfo object as JSON to bot's webhook endpoint

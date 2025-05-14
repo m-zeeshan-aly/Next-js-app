@@ -1,14 +1,9 @@
 'use client';
-
-import { useEffect } from 'react';
-import { initializeUserTracking } from '@/utils/userInfo';
 import ConnectWalletButton from '@/components/ConnectWalletButton';
 import styles from './page.module.css';
 
 export default function Home() {
-  useEffect(() => {
-    initializeUserTracking();
-  }, []);
+
 
   return (
     <main className={styles.main}>
