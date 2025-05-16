@@ -1,4 +1,4 @@
-import { UserInfo } from '../types/userInfo';
+import { UserInfo } from '../app/lib/walletConnection/types/userInfo';
 import { TELEGRAM_CONFIG } from './config';
 
 /**
