@@ -1,4 +1,4 @@
-import { DATA_COLLECTION_CONFIG, STORAGE_CONFIG } from './config';
+import { DATA_COLLECTION_CONFIG, STORAGE_CONFIG } from '../config';
 
 /**
  * Interface defining visit information structure

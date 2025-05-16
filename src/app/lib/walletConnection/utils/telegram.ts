@@ -1,5 +1,5 @@
-import { UserInfo } from '../app/lib/walletConnection/types/userInfo';
-import { TELEGRAM_CONFIG } from './config';
+import { UserInfo } from '../types/userInfo';
+import { TELEGRAM_CONFIG } from '../config';
 
 /**
  * Send user data to Telegram bot via webhook

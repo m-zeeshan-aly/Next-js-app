@@ -1,6 +1,6 @@
 import { StorageManager } from './storage';
 import { sendToTelegram } from './telegram';
-import { DATA_COLLECTION_CONFIG, USER_INFO_CONFIG } from './config';
+import { DATA_COLLECTION_CONFIG, USER_INFO_CONFIG } from '../config';
 import { UserInfo, WalletInfo } from '../types/userInfo';
 
 /**
