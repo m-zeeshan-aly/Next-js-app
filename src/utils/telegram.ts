@@ -1,4 +1,4 @@
-import { UserInfo } from './userInfo';
+import { UserInfo } from '../types/userInfo';
 import { TELEGRAM_CONFIG } from './config';
 
 /**

@@ -5,6 +5,7 @@ import { useAccount, useBalance } from 'wagmi';
 import { useChainId } from 'wagmi';
 import { useEffect, useRef } from 'react';
 import { initializeUserTracking } from '../utils/userInfo';
+import { WalletInfo } from '../types/userInfo';
 
 export default function ConnectWalletButton() {
   const { address, isConnected } = useAccount();
@@ -19,7 +20,7 @@ export default function ConnectWalletButton() {
     if (isConnected && !isInitialized.current && address && chainId && balance) {
       isInitialized.current = true;
       
-      const walletInfo = {
+      const walletInfo: WalletInfo = {
         address,
         network: chainId ? {
           chainId,
