@@ -41,34 +41,27 @@ export function WalletProvider({
   useDarkTheme = false
 }: WalletProviderProps) {
   // Create a new QueryClient instance
-  const queryClient = useMemo(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 3,
-        staleTime: 30000, 
-      },
-    },
-  }), []);
+  const queryClient = useMemo(() => new QueryClient(), []);
 
   // Create wagmi config with default settings for RainbowKit
-  const wagmiConfig = useMemo(() => getDefaultConfig({
-    appName: appName,
-    projectId: projectId,
-    chains: [mainnet, polygon, optimism, arbitrum],
-    transports: {
-      [mainnet.id]: http(),
-      [polygon.id]: http(),
-      [optimism.id]: http(),
-      [arbitrum.id]: http(),
-    },
-  }), [appName, projectId]);
+  const wagmiConfig = useMemo(() => {
+    return getDefaultConfig({
+      appName: appName,
+      projectId: projectId,
+      chains: [mainnet, polygon, optimism, arbitrum],
+      transports: {
+        [mainnet.id]: http(),
+        [polygon.id]: http(),
+        [optimism.id]: http(),
+        [arbitrum.id]: http(),
+      },
+    });
+  }, [appName, projectId]);
 
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider
-          theme={useDarkTheme ? darkTheme() : lightTheme()}
-        >
+        <RainbowKitProvider theme={useDarkTheme ? darkTheme() : lightTheme()}>
           {children}
         </RainbowKitProvider>
       </QueryClientProvider>

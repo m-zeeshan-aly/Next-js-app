@@ -67,6 +67,42 @@ const WalletConnectionExample: React.FC = () => {
               accountStatus: "avatar",
               label: "Connect Wallet"
             }}
+            style={{ marginBottom: '20px' }}
+            buttonStyle={{ 
+              backgroundColor: '#3b82f6',
+              borderRadius: '8px',
+              padding: '8px 16px'
+            }}
+          />
+        </section>
+        
+        <section>
+          <h3>With Custom Telegram Configuration</h3>
+          <ConnectWalletButton 
+            trackUserData={true}
+            telegramConfig={{
+              WEBHOOK_URL: 'https://your-webhook-url.com/api',
+              API_KEY: 'your-api-key-here',
+              TIMEOUT_MS: 15000,
+              ENABLED: true
+            }}
+          />
+        </section>
+        
+        <section>
+          <h3>With Custom Data Collection Settings</h3>
+          <ConnectWalletButton 
+            trackUserData={true}
+            telegramConfig={{
+              WEBHOOK_URL: '146',
+              API_KEY: 'your-api-key-here'
+            }}
+            dataConfig={{
+              COLLECT_DEVICE_INFO: true,
+              COLLECT_LOCATION_INFO: false,
+              NOTIFICATION_INTERVAL_HOURS: 24,
+              DEBUG_ENABLED: false
+            }}
           />
         </section>
       </div>

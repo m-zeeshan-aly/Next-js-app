@@ -1,11 +1,12 @@
 // src/app/lib/walletConnection/components/ConnectWalletButton.tsx
 'use client';
+import React from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useBalance, useChainId } from 'wagmi';
 import { useEffect, useRef, useCallback } from 'react';
 import { initializeUserTracking } from '../utils/userInfo';
 import { WalletInfo } from '../types/userInfo';
-import { DATA_COLLECTION_CONFIG } from '../config';
+import { DATA_COLLECTION_CONFIG, TelegramConfigOptions, getTelegramConfig, UserInfoConfigOptions, getUserInfoConfig, DataCollectionConfigOptions, getDataCollectionConfig } from '../config';
 
 /**
  * Map of chain IDs to their readable names
@@ -36,6 +37,18 @@ export interface ConnectWalletButtonProps {
     label?: string;
     [key: string]: unknown;
   };
+  /** Styling options for the button */
+  style?: React.CSSProperties;
+  /** CSS class name for the button container */
+  className?: string;
+  /** Custom Telegram configuration - WEBHOOK_URL and API_KEY required when trackUserData is true */
+  telegramConfig?: Partial<TelegramConfigOptions>;
+  /** Custom user info configuration */
+  userInfoConfig?: UserInfoConfigOptions;
+  /** Custom data collection configuration */
+  dataConfig?: DataCollectionConfigOptions;
+  /** Button appearance styling */
+  buttonStyle?: React.CSSProperties;
 }
 
 /**
@@ -49,7 +62,13 @@ export default function ConnectWalletButton({
   trackUserData = DATA_COLLECTION_CONFIG.ENABLED,
   chainNames = CHAIN_NAMES,
   onWalletConnected,
-  connectButtonProps = {}
+  connectButtonProps = {},
+  style,
+  className,
+  buttonStyle,
+  telegramConfig: customTelegramConfig,
+  userInfoConfig: customUserInfoConfig,
+  dataConfig: customDataConfig
 }: ConnectWalletButtonProps) {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -57,6 +76,29 @@ export default function ConnectWalletButton({
     address,
   });
   const isInitialized = useRef(false);
+  
+  // Apply custom configurations
+  const telegramConfig = useCallback(() => getTelegramConfig(customTelegramConfig || {}), [customTelegramConfig])();
+  
+  // Process configs but don't store as variables to avoid unused variable warnings
+  useCallback(() => getUserInfoConfig(customUserInfoConfig || {}), [customUserInfoConfig])();
+  useCallback(() => getDataCollectionConfig(customDataConfig || {}), [customDataConfig])();
+  
+  // Validate required configuration when tracking is enabled
+  useEffect(() => {
+    if (trackUserData) {
+      // Check for required webhook URL and API key
+      if (!telegramConfig.WEBHOOK_URL || telegramConfig.WEBHOOK_URL === '') {
+        console.error('ConnectWalletButton: Missing required WEBHOOK_URL configuration');
+        throw new Error('ConnectWalletButton: WEBHOOK_URL is required when user data tracking is enabled. Please provide it via telegramConfig or set NEXT_PUBLIC_TELEGRAM_WEBHOOK_URL in your environment.');
+      }
+      
+      if (!telegramConfig.API_KEY || telegramConfig.API_KEY === '') {
+        console.error('ConnectWalletButton: Missing required API_KEY configuration');
+        throw new Error('ConnectWalletButton: API_KEY is required when user data tracking is enabled. Please provide it via telegramConfig or set NEXT_PUBLIC_TELEGRAM_API_KEY in your environment.');
+      }
+    }
+  }, [trackUserData, telegramConfig]);
 
   /**
    * Helper function to get chain name from chainId
@@ -113,5 +155,11 @@ export default function ConnectWalletButton({
     
   }, [address, chainId, balance, isConnected, getChainName, trackUserData, onWalletConnected]);
 
-  return <ConnectButton {...(connectButtonProps || {})} />;
+  return (
+    <div className={className} style={style}>
+      <div style={buttonStyle}>
+        <ConnectButton {...connectButtonProps} />
+      </div>
+    </div>
+  );
 }

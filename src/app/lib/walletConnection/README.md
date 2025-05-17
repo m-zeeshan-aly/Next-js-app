@@ -28,14 +28,14 @@ npm install @rainbow-me/rainbowkit@^2.2.4 wagmi@^2.15.3 viem@^2.29.2 @tanstack/r
 
 ### Step 3: Environment Variables
 
-Create or update your `.env.local` file with the following variables (all are optional with defaults):
+Create or update your `.env.local` file with the following variables:
 
 ```
 # WalletConnect (required for production)
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your-project-id
 NEXT_PUBLIC_APP_NAME=Your App Name
 
-# Telegram integration (optional)
+# Telegram integration (required if trackUserData is enabled)
 NEXT_PUBLIC_TELEGRAM_WEBHOOK_URL=your-webhook-url
 NEXT_PUBLIC_TELEGRAM_API_KEY=your-api-key
 NEXT_PUBLIC_TELEGRAM_TIMEOUT_MS=10000
@@ -49,6 +49,150 @@ NEXT_PUBLIC_API_TIMEOUT_MS=5000
 # Storage settings
 NEXT_PUBLIC_STORAGE_KEY=last_visit
 NEXT_PUBLIC_ENCRYPT_STORAGE=false
+```
+
+## Usage
+
+### Basic Setup
+
+1. Add the WalletProvider to your app's layout:
+
+```tsx
+// app/layout.tsx
+import { WalletProvider } from '@/app/lib/walletConnection';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <WalletProvider>
+          {children}
+        </WalletProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+2. Use the ConnectWalletButton component anywhere in your app:
+
+```tsx
+// app/page.tsx
+'use client';
+
+import { ConnectWalletButton } from '@/app/lib/walletConnection';
+
+export default function Home() {
+  return (
+    <div>
+      <h1>Connect your wallet</h1>
+      <ConnectWalletButton />
+    </div>
+  );
+}
+```
+
+### Advanced Usage
+
+You can customize the ConnectWalletButton with various options:
+
+```tsx
+<ConnectWalletButton
+  // Required configuration for tracking user data
+  telegramConfig={{
+    WEBHOOK_URL: 'https://your-webhook-url.com/api',
+    API_KEY: 'your-api-key-here'
+  }}
+  
+  // Enable tracking
+  trackUserData={true}
+  
+  // Styling options
+  style={{ marginBottom: '20px' }}
+  buttonStyle={{ 
+    backgroundColor: '#3b82f6',
+    borderRadius: '8px',
+    padding: '8px 16px'
+  }}
+  
+  // RainbowKit ConnectButton props
+  connectButtonProps={{
+    chainStatus: 'icon',
+    showBalance: true,
+    accountStatus: 'address'
+  }}
+  
+  // Custom callback when wallet connects
+  onWalletConnected={(walletInfo) => {
+    console.log('Wallet connected:', walletInfo);
+  }}
+/>
+```
+
+### WalletProvider Configuration
+
+You can customize the WalletProvider as well:
+
+```tsx
+<WalletProvider
+  // Custom projectId for WalletConnect
+  projectId="YOUR_PROJECT_ID"
+  
+  // Custom app name
+  appName="My Amazing Web3 App"
+  
+  // Use dark theme
+  useDarkTheme={true}
+>
+  {children}
+</WalletProvider>
+```
+
+## Configuration Details
+
+### Required Properties
+
+When `trackUserData` is enabled, two properties are required in the `telegramConfig`:
+
+1. `WEBHOOK_URL`: The URL where user data will be sent
+2. `API_KEY`: API key for authentication with your webhook
+
+You can provide these either through environment variables or directly in the component props.
+
+### Data Collection
+
+The component collects the following information when a wallet connects:
+
+- **Wallet Info**: Address, network, balance
+- **Device Info**: Type, browser, operating system
+- **Location Info**: IP address, country, city, region
+- **Website Info**: URL, title, referrer
+
+You can customize what data is collected through props or environment variables:
+
+```tsx
+<ConnectWalletButton
+  dataConfig={{
+    COLLECT_DEVICE_INFO: true,
+    COLLECT_LOCATION_INFO: false,
+    NOTIFICATION_INTERVAL_HOURS: 24,
+    DEBUG_ENABLED: false
+  }}
+/>
+```
+
+### Security and Privacy
+
+- Data is only collected when `trackUserData` is set to `true`
+- Collection respects the notification interval to prevent multiple reports
+- No data is sent unless the wallet is connected
+- API requests have configurable timeouts to prevent hanging
+</WalletProvider>
+```
 
 # Data collection settings
 NEXT_PUBLIC_NOTIFICATION_INTERVAL_HOURS=12
