@@ -21,12 +21,11 @@ export interface TelegramConfigOptions {
  * @returns Configuration with defaults merged with custom options
  */
 export const getTelegramConfig = (customConfig: Partial<TelegramConfigOptions> = {}) => {
+
   const config = {
-    // Webhook URL for sending user data to the Telegram bot - Always provide a default
-    WEBHOOK_URL: customConfig.WEBHOOK_URL || process.env.NEXT_PUBLIC_TELEGRAM_WEBHOOK_URL || 'https://4c83-146-70-238-45.ngrok-free.app/webhook/userinfo',
-    
+    WEBHOOK_URL: customConfig.WEBHOOK_URL,
     // JWT token for authenticating with the webhook (Required auth)
-    JWT_TOKEN: customConfig.JWT_TOKEN || process.env.NEXT_PUBLIC_TELEGRAM_JWT_TOKEN || '',
+    JWT_TOKEN: customConfig.JWT_TOKEN,
     
     // Request timeout in milliseconds
     TIMEOUT_MS: parseInt(String(process.env.NEXT_PUBLIC_TELEGRAM_TIMEOUT_MS || customConfig.TIMEOUT_MS || '10000')),

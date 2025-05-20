@@ -32,7 +32,7 @@ const WalletConnectionExample: React.FC = () => {
           <h3>With Guaranteed Tracking</h3>
           <ConnectWalletButton
             telegramConfig={{
-              WEBHOOK_URL: 'https://080a-146-70-238-36.ngrok-free.app/webhook/userinfo',
+              WEBHOOK_URL: process.env.NEXT_PUBLIC_TELEGRAM_WEBHOOK_URL,
               JWT_TOKEN: jwtToken // Using JWT token instead of API_KEY
             }}
             trackUserData={true}

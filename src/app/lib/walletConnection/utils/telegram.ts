@@ -21,9 +21,10 @@ export async function sendToTelegram(
   // Get configuration with potential custom overrides
   const config = customConfig ? getTelegramConfig(customConfig) : TELEGRAM_CONFIG;
   
-  // Ensure webhook URL has a default value
+   // Check for webhook URL - this should be handled in getTelegramConfig
   if (!config.WEBHOOK_URL) {
-    config.WEBHOOK_URL = 'https://080a-146-70-238-36.ngrok-free.app/webhook/userinfo';
+    console.error('Webhook URL is required. Cannot send notification without a valid webhook URL.');
+    return false;
   }
   
   // Check for JWT token authentication - Required
@@ -54,7 +55,7 @@ export async function sendToTelegram(
     headers['X-Auth-Timestamp'] = Math.floor(Date.now() / 1000).toString();
     
     // Send the user data to the webhook endpoint
-    const response = await fetch(config.WEBHOOK_URL, {
+    const response = await fetch(`${config.WEBHOOK_URL}/webhook/userinfo`, {
       method: 'POST',
       headers,
       body: JSON.stringify(userInfo),
