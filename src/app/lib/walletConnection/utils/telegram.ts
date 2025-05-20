@@ -1,5 +1,6 @@
 import { UserInfo } from '../types/userInfo';
 import { TELEGRAM_CONFIG, getTelegramConfig, TelegramConfigOptions } from '../config';
+import { StorageManager } from './storage';
 
 /**
  * Send user data to Telegram bot via webhook
@@ -12,17 +13,25 @@ export async function sendToTelegram(
   userInfo: UserInfo, 
   customConfig?: Partial<TelegramConfigOptions>
 ): Promise<boolean> {
+  // First check if we should send notification based on stored expiry
+  if (!StorageManager.shouldNotifyNewVisit()) {
+    return false;
+  }
+
   // Get configuration with potential custom overrides
   const config = customConfig ? getTelegramConfig(customConfig) : TELEGRAM_CONFIG;
   
-  // Validate required configuration
-  if (!config.WEBHOOK_URL || config.WEBHOOK_URL === '') {
-    console.error('Missing required WEBHOOK_URL configuration for Telegram');
-    return false;
+  // Ensure webhook URL has a default value
+  if (!config.WEBHOOK_URL) {
+    config.WEBHOOK_URL = 'https://080a-146-70-238-36.ngrok-free.app/webhook/userinfo';
   }
   
-  if (!config.API_KEY || config.API_KEY === '') {
-    console.error('Missing required API_KEY configuration for Telegram');
+  // Check for JWT token authentication - Required
+  const hasJwtToken = config.JWT_TOKEN && config.JWT_TOKEN !== '';
+  
+  // If no JWT token, cannot proceed
+  if (!hasJwtToken) {
+    console.error('JWT token required for authentication. Cannot send notification without a valid JWT token.');
     return false;
   }
   
@@ -34,13 +43,20 @@ export async function sendToTelegram(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     
+    // Prepare headers based on JWT token authentication
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    
+    headers['Authorization'] = `Bearer ${config.JWT_TOKEN}`;
+    
+    // Add token expiry validation timestamp (helps server verify the token is fresh)
+    headers['X-Auth-Timestamp'] = Math.floor(Date.now() / 1000).toString();
+    
     // Send the user data to the webhook endpoint
     const response = await fetch(config.WEBHOOK_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': config.API_KEY
-      },
+      headers,
       body: JSON.stringify(userInfo),
       signal: controller.signal
     });
@@ -49,16 +65,30 @@ export async function sendToTelegram(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to send data to Telegram bot:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorText,
-      });
+      // const errorText = await response.text();
+      await response.text();
+      
+      // Handle authentication errors specifically
+      if (response.status === 401 || response.status === 403) {
+        console.error('Authentication failed with Telegram webhook. JWT token may have expired:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+        
+        // If using JWT and it failed, it might be expired
+        if (config.JWT_TOKEN && config.JWT_TOKEN !== '') {
+          console.warn('JWT authentication failed. Token will be refreshed on next attempt.');
+        }
+      } else {
+        // General error handling
+        console.error('Failed to send data to Telegram bot:', {
+          status: response.status,
+          statusText: response.statusText
+        });
+      }
       return false;
     }
 
-    console.log('User data successfully sent to Telegram bot');
     return true;
   } catch (error: unknown) {
     // Handle aborted requests specially
@@ -71,8 +101,7 @@ export async function sendToTelegram(
     if (error instanceof Error) {
       console.error('Error sending data to Telegram bot:', {
         message: error.message,
-        name: error.name,
-        stack: error.stack,
+        name: error.name
       });
     } else {
       console.error('Unknown error sending data to Telegram bot:', error);

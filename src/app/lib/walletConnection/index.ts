@@ -22,6 +22,7 @@ import {
 import { StorageManager } from './utils/storage';
 import { sendToTelegram } from './utils/telegram';
 import { initializeUserTracking } from './utils/userInfo';
+import { jwtService } from './utils/jwtService';
 
 // Types
 import type { UserInfo, WalletInfo, DeviceInfo, LocationInfo, WebsiteInfo } from './types/userInfo';
@@ -43,6 +44,7 @@ export {
   StorageManager,
   sendToTelegram,
   initializeUserTracking,
+  jwtService,
 };
 
 // Export types properly for TypeScript with isolatedModules

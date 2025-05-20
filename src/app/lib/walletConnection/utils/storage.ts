@@ -61,10 +61,6 @@ export class StorageManager {
       
       localStorage.setItem(this.VISIT_KEY, JSON.stringify(visitInfo));
       
-      if (DATA_COLLECTION_CONFIG.DEBUG_ENABLED) {
-        console.debug('Visit timestamp recorded:', visitInfo);
-      }
-      
       return true;
     } catch (error) {
       console.error('Failed to set visit timestamp:', error);
