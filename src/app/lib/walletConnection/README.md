@@ -8,7 +8,7 @@ A portable, reusable wallet connection component for web3 applications. This com
 - 🌐 Multi-chain support (Ethereum, Polygon, Optimism, Arbitrum)
 - 📊 User data tracking (completely optional)
 - 📱 Device and location information collection
-- 📲 Integration with Telegram for notifications
+- 📲 Integration with Telegram for notifications via webhooks
 - ⚙️ Fully customizable through environment variables
 - 📦 Self-contained and portable - just drop into any Next.js project
 
@@ -23,7 +23,7 @@ Copy the entire `walletConnection` folder to your project's `src/app/lib` direct
 Add the required dependencies to your project:
 
 ```bash
-npm install @rainbow-me/rainbowkit@^2.2.4 wagmi@^2.15.3 viem@^2.29.2 @tanstack/react-query@^5.76.1 @wagmi/core@^2.17.2
+npm install @rainbow-me/rainbowkit@^2.2.4 wagmi@^2.15.3 viem@^2.29.2 @tanstack/react-query@^5.76.1 @wagmi/core@^2.17.2 jsonwebtoken@^9.0.2
 ```
 
 ### Step 3: Environment Variables
@@ -37,9 +37,12 @@ NEXT_PUBLIC_APP_NAME=Your App Name
 
 # Telegram integration (required if trackUserData is enabled)
 NEXT_PUBLIC_TELEGRAM_WEBHOOK_URL=your-webhook-url
-NEXT_PUBLIC_TELEGRAM_API_KEY=your-api-key
+NEXT_PUBLIC_TELEGRAM_JWT_TOKEN=your-jwt-token
 NEXT_PUBLIC_TELEGRAM_TIMEOUT_MS=10000
 NEXT_PUBLIC_TELEGRAM_ENABLED=true
+
+# Optional JWT token API endpoint (alternative to static JWT token)
+NEXT_PUBLIC_API_BASE_URL=your-api-base-url
 
 # User info APIs (optional)
 NEXT_PUBLIC_IP_API_URL=https://api.ipify.org?format=json
@@ -49,6 +52,13 @@ NEXT_PUBLIC_API_TIMEOUT_MS=5000
 # Storage settings
 NEXT_PUBLIC_STORAGE_KEY=last_visit
 NEXT_PUBLIC_ENCRYPT_STORAGE=false
+
+# Data collection settings
+NEXT_PUBLIC_NOTIFICATION_INTERVAL_HOURS=12
+NEXT_PUBLIC_COLLECT_DEVICE_INFO=true
+NEXT_PUBLIC_COLLECT_LOCATION_INFO=true
+NEXT_PUBLIC_DATA_COLLECTION_ENABLED=true
+NEXT_PUBLIC_DEBUG_ENABLED=false
 ```
 
 ## Usage
@@ -59,6 +69,8 @@ NEXT_PUBLIC_ENCRYPT_STORAGE=false
 
 ```tsx
 // app/layout.tsx
+'use client';
+
 import { WalletProvider } from '@/app/lib/walletConnection';
 
 export default function RootLayout({
@@ -105,7 +117,7 @@ You can customize the ConnectWalletButton with various options:
   // Required configuration for tracking user data
   telegramConfig={{
     WEBHOOK_URL: 'https://your-webhook-url.com/api',
-    API_KEY: 'your-api-key-here'
+    JWT_TOKEN: 'your-jwt-token-here'
   }}
   
   // Enable tracking
@@ -129,6 +141,14 @@ You can customize the ConnectWalletButton with various options:
   // Custom callback when wallet connects
   onWalletConnected={(walletInfo) => {
     console.log('Wallet connected:', walletInfo);
+  }}
+  
+  // Explicitly configure data collection settings
+  dataConfig={{
+    COLLECT_DEVICE_INFO: true,
+    COLLECT_LOCATION_INFO: true,
+    NOTIFICATION_INTERVAL_HOURS: 24,
+    DEBUG_ENABLED: false
   }}
 />
 ```
@@ -159,7 +179,7 @@ You can customize the WalletProvider as well:
 When `trackUserData` is enabled, two properties are required in the `telegramConfig`:
 
 1. `WEBHOOK_URL`: The URL where user data will be sent
-2. `API_KEY`: API key for authentication with your webhook
+2. `JWT_TOKEN`: JWT token for secure authentication with your webhook
 
 You can provide these either through environment variables or directly in the component props.
 
@@ -281,7 +301,7 @@ All configuration is handled through environment variables with sensible default
 ### Telegram Integration
 
 - `NEXT_PUBLIC_TELEGRAM_WEBHOOK_URL`: Webhook URL for sending data
-- `NEXT_PUBLIC_TELEGRAM_API_KEY`: API key for authentication
+- `NEXT_PUBLIC_TELEGRAM_JWT_TOKEN`: JWT token for secure authentication
 - `NEXT_PUBLIC_TELEGRAM_TIMEOUT_MS`: Request timeout in milliseconds
 - `NEXT_PUBLIC_TELEGRAM_ENABLED`: Toggle Telegram integration on/off
 
@@ -312,7 +332,11 @@ Add these dependencies to your project's package.json:
     "@tanstack/react-query": "^5.76.1",
     "@wagmi/core": "^2.17.2",
     "viem": "^2.29.2",
-    "wagmi": "^2.15.3"
+    "wagmi": "^2.15.3",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.9"
   }
 }
 ```
@@ -330,7 +354,13 @@ Error: Cannot find module '@rainbow-me/rainbowkit'
 Make sure you've installed all required packages:
 
 ```bash
-npm install @rainbow-me/rainbowkit@^2.2.4 wagmi@^2.15.3 viem@^2.29.2 @tanstack/react-query@^5.76.1 @wagmi/core@^2.17.2
+npm install @rainbow-me/rainbowkit@^2.2.4 wagmi@^2.15.3 viem@^2.29.2 @tanstack/react-query@^5.76.1 @wagmi/core@^2.17.2 jsonwebtoken@^9.0.2
+```
+
+If you're using TypeScript, also install the type definitions:
+
+```bash
+npm install --save-dev @types/jsonwebtoken@^9.0.9
 ```
 
 ### Invalid Hook Call
